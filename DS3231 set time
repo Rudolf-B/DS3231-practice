@@ -1,0 +1,51 @@
+#include <Wire.h>
+
+byte hoursAMPM;
+bool isPM;
+
+void setup() {
+  Wire.begin(); // Initialize I2C communication
+
+  isPM = false;  // Set to true for PM and false for AM
+  setDS3231DateTime(47, 23, 11, 6, 28, 10, 23);
+  clearOSF();
+}
+
+void loop() {
+  // Your main code here
+}
+
+void setDS3231DateTime(byte seconds, byte minutes, byte hours,
+                       byte dayOfWeek, byte dayOfMonth, byte month, byte year) {
+  hoursAMPM = decToBcd(hours);  // Convert the hour to BCD format
+
+  // Adjusting for the DS3231's 12-hour format bit settings
+  hoursAMPM |= 0x40;  // Setting bit 6 to indicate 12-hour mode
+
+  if (isPM) {
+    hoursAMPM |= 0x20;  // Setting the bit 5 for PM
+  }
+
+  Wire.beginTransmission(0x68); // Start communication with DS3231 RTC
+  Wire.write(0);                     // Set the register pointer to 00h (Seconds register)
+  Wire.write(decToBcd(seconds));     // Write seconds in BCD format
+  Wire.write(decToBcd(minutes));     // Write minutes in BCD format
+  Wire.write(hoursAMPM);             // Write formatted hours in 12-hour format with AM/PM bit
+  Wire.write(dayOfWeek);             // Write day of the week
+  Wire.write(decToBcd(dayOfMonth));  // Write day of the month in BCD format
+  Wire.write(decToBcd(month));       // Write month in BCD format
+  Wire.write(decToBcd(year));        // Write last two digits of the year in BCD format
+  Wire.endTransmission();
+}
+
+byte decToBcd(byte val) {
+  return ((val / 10 * 16) + (val % 10));
+}
+
+void clearOSF() {
+  Wire.beginTransmission(0x68);      // Start communication with DS3231 RTC
+  Wire.write(0x0F);                  // Address the control/status register
+  byte status = Wire.read();
+  Wire.write(status & 0b01111111);   // Clear the OSF bit (bit 7)
+  Wire.endTransmission();
+}
