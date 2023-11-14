@@ -1,0 +1,66 @@
+#include <Wire.h>
+
+#define DS3231_ADDR  0x68
+
+void setup() {
+  Wire.begin();
+  Serial.begin(115200);
+  Serial.println("DS3231 Temperature Reader");
+}
+
+void loop() {
+  triggerTempConversion();  // Start a temperature conversion
+  delay(1000);  // Wait for conversion to complete (2 seconds is more than enough)
+
+  byte msb, lsb;
+  float temperatureC, temperatureF;
+
+  // Start I2C communication
+  Wire.beginTransmission(DS3231_ADDR);
+  
+  // Access the temperature register
+  Wire.write(0x11);  // Starting from the MSB of temperature
+  
+  Wire.endTransmission();
+  Wire.requestFrom(DS3231_ADDR, 2);  // Request two bytes (MSB and LSB of temperature)
+
+  if(Wire.available()) {
+    msb = Wire.read(); // Integer part
+    lsb = Wire.read(); // Fractional part
+
+    // Convert to actual temperature in Celsius
+    temperatureC = msb + ((lsb >> 6) * 0.25); // Only bit 6 and 7 of the LSB are used for fractional part
+
+    // Convert Celsius to Fahrenheit
+    temperatureF = (temperatureC * 9.0 / 5.0) + 32.0;
+
+    Serial.print("Temperature: ");
+    Serial.print(temperatureC, 2);  // Print with 2 decimal places
+    Serial.println("°C");
+    
+    Serial.print("Temperature: ");
+    Serial.print(temperatureF, 2);  // Print with 2 decimal places
+    Serial.println("°F");
+  }
+
+  delay(0);  // Wait for a second before starting another conversion
+}
+
+void triggerTempConversion() {
+  Wire.beginTransmission(0x68);
+  Wire.write(0x0E);  // Control register address
+  
+  // Read current value of control register
+  Wire.endTransmission();
+  Wire.requestFrom(0x68, 1);
+  byte control = Wire.read();
+  
+  // Set CONV bit using bitwise OR
+  control |= 0b00100000;  // Set bit at position 5
+  
+  // Write back to control register
+  Wire.beginTransmission(0x68);
+  Wire.write(0x0E);  // Control register address
+  Wire.write(control);
+  Wire.endTransmission();
+}
