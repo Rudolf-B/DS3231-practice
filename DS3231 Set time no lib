@@ -1,0 +1,45 @@
+#include <Wire.h>
+
+byte SEC = 47;
+byte MINUTES = 23;
+byte HOUR = 11;   // Hour value
+bool isPM = true;  // Set to true for PM and false for AM
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(); // Initialize I2C communication
+
+  // Set seconds
+  Wire.beginTransmission(0x68); // Start communication with DS3231 RTC
+  Wire.write(0);                // Set the register pointer to 00h (Seconds register)
+  Wire.write(decToBcd(SEC));    // Write seconds in BCD format
+  Wire.endTransmission();
+
+  // Set minutes
+  Wire.beginTransmission(0x68); // Start communication with DS3231 RTC
+  Wire.write(1);                // Set the register pointer to 01h (Minutes register)
+  Wire.write(decToBcd(MINUTES));    // Write minutes in BCD format
+  Wire.endTransmission();
+
+  // Set hours
+  byte bcdHour = decToBcd(HOUR);
+  bcdHour |= 0x40;  // Setting bit 6 to indicate 12-hour mode
+
+  if (isPM) {
+    bcdHour |= 0x20;  // Setting the bit 5 for PM
+  }
+
+  Wire.beginTransmission(0x68); // Start communication with DS3231 RTC
+  Wire.write(2);                // Set the register pointer to 02h (Hours register)
+  Wire.write(bcdHour);          // Write hour in BCD format
+  Wire.endTransmission();
+}
+
+void loop() {
+  // Optionally, you can print the set values or other information in this loop
+  // or just keep it empty if you don't need any repeated actions.
+}
+
+byte decToBcd(byte val) {
+  return ((val / 10 * 16) + (val % 10));
+}
